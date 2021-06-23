@@ -63,7 +63,7 @@ function loadInfo() {
                 '<h5 class="card-title">Instance Info</h5>' +
                 '<h6 class="card-subtitle mb-2 text-muted" id="whale-challenge-count-down">Remaining Time: ' + response.remaining_time + 's</h6>' +
                 '<h6 class="card-subtitle mb-2 text-muted">Lan Domain: ' + response.lan_domain + '</h6>' +
-                '<p class="card-text">' + response.user_access + '</p>' +
+                '<p class="card-text">' + (response.user_access.slice(0,2) == 'ht' ? '<a href="'+response.user_access+'" target="_blank">'+response.user_access+'</a>' : response.user_access) + '</p>' +
                 '<button type="button" class="btn btn-danger card-link" id="whale-button-destroy" onclick="CTFd._internal.challenge.destroy()">Destroy this instance</button>' +
                 '<button type="button" class="btn btn-success card-link" id="whale-button-renew" onclick="CTFd._internal.challenge.renew()">Renew this instance</button>' +
                 '</div>' +
