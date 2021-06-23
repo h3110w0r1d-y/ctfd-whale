@@ -1,4 +1,3 @@
-import docker
 import ipaddress
 import warnings
 from CTFd.cache import cache
@@ -13,10 +12,11 @@ class CacheProvider:
     def __init__(self, app, *args, **kwargs):
         if app.config['CACHE_TYPE'] == 'redis':
             self.provider = RedisCacheProvider(app, *args, **kwargs)
-        elif app.config['CACHE_TYPE'] == 'filesystem':
+        elif app.config['CACHE_TYPE'] in ['filesystem', 'simple']:
             if not hasattr(CacheProvider, 'cache'):
                 CacheProvider.cache = {}
             self.provider = FilesystemCacheProvider(app, *args, **kwargs)
+            self.init_port_sets()
 
     def init_port_sets(self):
         self.clear()
@@ -31,7 +31,8 @@ class CacheProvider:
             if port not in used_port_list:
                 self.add_available_port(port)
 
-        client = docker.DockerClient(base_url=get_config("whale:docker_api_url"))
+        from .docker import get_docker_client
+        client = get_docker_client()
 
         docker_subnet = get_config("whale:docker_subnet", "174.1.0.0/16")
         docker_subnet_new_prefix = int(

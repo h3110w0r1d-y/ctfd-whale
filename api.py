@@ -1,6 +1,6 @@
 from datetime import datetime
-from flask import request, abort
-from flask_restx import Namespace, Resource
+from flask import request
+from flask_restx import Namespace, Resource, abort
 from werkzeug.exceptions import Forbidden, NotFound
 
 from CTFd.utils import user as current_user
@@ -14,38 +14,13 @@ admin_namespace = Namespace("ctfd-whale-admin")
 user_namespace = Namespace("ctfd-whale-user")
 
 
-@admin_namespace.errorhandler(NotFound)
-@user_namespace.errorhandler(NotFound)
-def handle_notfound(err):
-    data = {
-        'success': False,
-        'message': err.description
-    }
-    return data, 404
-
-
-@admin_namespace.errorhandler(Forbidden)
-@user_namespace.errorhandler(Forbidden)
-def handle_forbidden(err):
-    if 'You don\'t have the permission' not in err.description:
-        message = err.description
-    else:
-        message = 'Please login first'
-    data = {
-        'success': False,
-        'message': message
-    }
-    return data, 403
-
-
 @admin_namespace.errorhandler
 @user_namespace.errorhandler
 def handle_default(err):
-    data = {
+    return {
         'success': False,
         'message': 'Unexpected things happened'
-    }
-    return data, 500
+    }, 500
 
 
 @admin_namespace.route('/container')
@@ -75,7 +50,7 @@ class AdminContainers(Resource):
         user_id = request.args.get('user_id', -1)
         result, message = ControlUtil.try_renew_container(user_id=int(user_id))
         if not result:
-            abort(403, message)
+            abort(403, message, success=False)
         return {'success': True, 'message': message}
 
     @staticmethod
@@ -122,7 +97,7 @@ class UserContainers(Resource):
 
         current_count = DBContainer.get_all_alive_container_count()
         if int(get_config("whale:docker_max_container_count")) <= int(current_count):
-            abort(403, 'Max container count exceed.')
+            abort(403, 'Max container count exceed.', success=False)
 
         challenge_id = request.args.get('challenge_id')
         result, message = ControlUtil.try_add_container(
@@ -130,7 +105,7 @@ class UserContainers(Resource):
             challenge_id=challenge_id
         )
         if not result:
-            abort(403, message)
+            abort(403, message, success=False)
         return {'success': True, 'message': message}
 
     @staticmethod
@@ -142,9 +117,9 @@ class UserContainers(Resource):
         docker_max_renew_count = int(get_config("whale:docker_max_renew_count", 5))
         container = DBContainer.get_current_containers(user_id)
         if container is None:
-            abort(403, 'Instance not found.')
+            abort(403, 'Instance not found.', success=False)
         if container.renew_count >= docker_max_renew_count:
-            abort(403, 'Max renewal count exceed.')
+            abort(403, 'Max renewal count exceed.', success=False)
         result, message = ControlUtil.try_renew_container(user_id=user_id)
         return {'success': result, 'message': message}
 
@@ -155,5 +130,5 @@ class UserContainers(Resource):
         user_id = current_user.get_current_user().id
         result, message = ControlUtil.try_remove_container(user_id)
         if not result:
-            abort(403, message)
+            abort(403, message, success=False)
         return {'success': True, 'message': message}

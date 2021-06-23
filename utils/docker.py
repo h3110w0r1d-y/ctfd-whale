@@ -12,11 +12,29 @@ from .cache import CacheProvider
 from .exceptions import WhaleError
 
 
+def get_docker_client():
+    if get_config("whale:docker_use_ssl", False):
+        tls_config = docker.tls.TLSConfig(
+            verify=True,
+            ca_cert=get_config("whale:docker_ssl_ca_cert") or None,
+            client_cert=(
+                get_config("whale:docker_ssl_client_cert"),
+                get_config("whale:docker_ssl_client_key")
+            ),
+        )
+        return docker.DockerClient(
+            base_url=get_config("whale:docker_api_url"),
+            tls=tls_config,
+        )
+    else:
+        return docker.DockerClient(base_url=get_config("whale:docker_api_url"))
+
+
 class DockerUtils:
     @staticmethod
     def init():
         try:
-            DockerUtils.client = docker.DockerClient(base_url=get_config("whale:docker_api_url"))
+            DockerUtils.client = get_docker_client()
             # docker-py is thread safe: https://github.com/docker/docker-py/issues/619
         except Exception:
             raise WhaleError(
@@ -103,9 +121,9 @@ class DockerUtils:
             )
         for name, image in images.items():
             if has_processed_main:
-                container_name = f'{container.user_id}-{container.uuid}'
-            else:
                 container_name = f'{container.user_id}-{uuid.uuid4()}'
+            else:
+                container_name = f'{container.user_id}-{container.uuid}'
                 node = DockerUtils.choose_node(image, get_config("whale:docker_swarm_nodes", "").split(","))
                 has_processed_main = True
             client.services.create(
