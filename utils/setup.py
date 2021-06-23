@@ -26,15 +26,13 @@ def setup_default_configs():
         set_config('whale:' + key, val)
     db.session.add(WhaleRedirectTemplate(
         'http',
-        'http://{{ container.http_subdomain }}.'
-        '{{ get_config("whale:frp_http_domain_suffix", "") }}'
-        '{% if get_config("whale:frp_http_port", "80") != 80 %}:{{ get_config("whale:frp_http_port") }}{% endif %}/',
+        'http://{% if get_config("whale:frp_http_domain_suffix", "") != "" %}{{ container.http_subdomain }}.{{ get_config("whale:frp_http_domain_suffix", "") }}{% if get_config("whale:frp_http_port", "80") != 80 %}:{{ get_config("whale:frp_http_port") }}{% endif %}{% else %}{{ get_config("whale:frp_direct_ip_address", "127.0.0.1") }}:{{ container.port }}{% endif %}/',
         '''
 [http_{{ container.user_id|string }}-{{ container.uuid }}]
-type = http
+type = {% if get_config("whale:frp_http_domain_suffix", "") == "" %}tcp{% else %}http{% endif %}
 local_ip = {{ container.user_id|string }}-{{ container.uuid }}
 local_port = {{ container.challenge.redirect_port }}
-subdomain = {{ container.http_subdomain }}
+{% if get_config("whale:frp_http_domain_suffix", "") == "" %}remote_port = {{ container.port }}{% else %}subdomain = {{ container.http_subdomain }}{% endif %}
 use_compression = true
 '''
     ))
